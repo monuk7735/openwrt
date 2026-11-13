@@ -1,0 +1,121 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (C) 2026 OpenWrt.org
+ * Device Tree for ZTE ZXHN F670L (v1.1)
+ */
+
+/dts-v1/;
+
+#include "zx279128.dtsi"
+
+/ {
+	model = "ZTE ZXHN F670L v1.1";
+	compatible = "zte,zxhn-f670l", "zte,f670l", "zte,zx279128";
+
+	aliases {
+		serial0 = &uart0;
+		serial1 = &uart1;
+	};
+
+	chosen {
+		bootargs = "console=ttyS0,115200n8 earlycon=zteuart,0x94405000";
+		stdout-path = "serial0:115200n8";
+	};
+
+	memory@40000000 {
+		device_type = "memory";
+		reg = <0x40000000 0x08000000>; /* 128 MB DDR3 */
+	};
+};
+
+&uart0 {
+	status = "okay";
+};
+
+&spifc {
+	status = "okay";
+
+	flash@0 {
+		compatible = "spi-nand";
+		reg = <0>;
+		spi-max-frequency = <50000000>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0 {
+				label = "u-boot";
+				reg = <0x00000000 0x00200000>;
+				read-only;
+			};
+
+			partition@200000 {
+				label = "others";
+				reg = <0x00200000 0x00400000>;
+			};
+
+			partition@600000 {
+				label = "paramtag";
+				reg = <0x00600000 0x00400000>;
+				read-only;
+			};
+
+			partition@a00000 {
+				label = "wlan";
+				reg = <0x00a00000 0x00400000>;
+				read-only;
+			};
+
+			partition@e00000 {
+				label = "usercfg";
+				reg = <0x00e00000 0x00800000>;
+			};
+
+			partition@1600000 {
+				label = "middleware";
+				reg = <0x01600000 0x00400000>;
+			};
+
+			partition@1a00000 {
+				label = "kernel1";
+				reg = <0x01a00000 0x02000000>;
+			};
+
+			partition@3a00000 {
+				label = "kernel2";
+				reg = <0x03a00000 0x02000000>;
+			};
+
+			partition@5a00000 {
+				label = "rootfs";
+				reg = <0x05a00000 0x01fe0000>;
+			};
+		};
+	};
+};
+
+&pcie {
+	status = "okay";
+};
+
+&usb_dwc2 {
+	status = "okay";
+};
+
+&usb_dwc3 {
+	status = "okay";
+};
+
+&mdio {
+	status = "okay";
+};
+
+&pp {
+	status = "okay";
+};
+
+&switch {
+	status = "okay";
+};

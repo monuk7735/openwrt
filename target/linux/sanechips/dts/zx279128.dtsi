@@ -1,0 +1,223 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (C) 2026 OpenWrt.org
+ * Sanechips / ZTE ZX279128 Dual-Core ARM Cortex-A9 SoC
+ */
+
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+
+/ {
+	#address-cells = <1>;
+	#size-cells = <1>;
+	compatible = "zte,zx279128", "zte,zx279128-smp";
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		enable-method = "zte,zx279128-smp";
+
+		cpu0: cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a9";
+			reg = <0>;
+			next-level-cache = <&l2>;
+		};
+
+		cpu1: cpu@1 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a9";
+			reg = <1>;
+			next-level-cache = <&l2>;
+		};
+	};
+
+	clocks {
+		osc24m: osc24m {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <24000000>;
+		};
+
+		clk_uart: clk_uart {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <100000000>;
+		};
+
+		clk_arm: clk_arm {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <800000000>;
+		};
+
+		clk_periph: clk_periph {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <400000000>;
+		};
+	};
+
+	soc {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "simple-bus";
+		interrupt-parent = <&gic>;
+		ranges;
+
+		gic: interrupt-controller@801000 {
+			compatible = "arm,cortex-a9-gic";
+			#interrupt-cells = <3>;
+			interrupt-controller;
+			reg = <0x00801000 0x1000>,
+			      <0x00800100 0x100>;
+		};
+
+		global_timer: timer@800200 {
+			compatible = "arm,cortex-a9-global-timer";
+			reg = <0x00800200 0x20>;
+			interrupts = <GIC_PPI 11 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>;
+			clocks = <&clk_periph>;
+		};
+
+		twd_timer: timer@800600 {
+			compatible = "arm,cortex-a9-twd-timer";
+			reg = <0x00800600 0x20>;
+			interrupts = <GIC_PPI 13 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_EDGE_RISING)>;
+			clocks = <&clk_periph>;
+		};
+
+		twd_wdt: watchdog@800620 {
+			compatible = "arm,cortex-a9-twd-wdt";
+			reg = <0x00800620 0x20>;
+			interrupts = <GIC_PPI 14 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_EDGE_RISING)>;
+			clocks = <&clk_periph>;
+		};
+
+		l2: l2-cache-controller@c00000 {
+			compatible = "arm,pl310-cache";
+			reg = <0x00c00000 0x1000>;
+			cache-unified;
+			cache-level = <2>;
+			arm,data-latency = <2 2 2>;
+			arm,tag-latency = <2 2 2>;
+		};
+
+		timer1: timer@94402000 {
+			compatible = "zxic,apb-timer1", "syscon";
+			reg = <0x94402000 0x1000>;
+			interrupts = <GIC_SPI 18 IRQ_TYPE_LEVEL_HIGH>;
+		};
+
+		topcrm: syscon@94000000 {
+			compatible = "zte,ZX279127-topcrm", "syscon";
+			reg = <0x94000000 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		lsp0crpm: syscon@94400000 {
+			compatible = "zte,ZX279127-lsp0crpm", "syscon";
+			reg = <0x94400000 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		uart0: serial@94405000 {
+			compatible = "zte,ZX279127-uart", "ns16550a";
+			reg = <0x94405000 0x1000>;
+			interrupts = <GIC_SPI 10 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&clk_uart>;
+			reg-shift = <2>;
+			status = "disabled";
+		};
+
+		uart1: serial@94406000 {
+			compatible = "zte,ZX279127-uart", "ns16550a";
+			reg = <0x94406000 0x1000>;
+			interrupts = <GIC_SPI 9 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&clk_uart>;
+			reg-shift = <2>;
+			status = "disabled";
+		};
+
+		spifc: spi-flash-controller@94407000 {
+			compatible = "zte,ZX27912x-spifc", "syscon";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x94407000 0x1000>;
+			reg-names = "spifc_reg";
+			interrupts = <GIC_SPI 8 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
+
+		lsp1crpm: syscon@9a100000 {
+			compatible = "zte,ZX279127-lsp1crpm", "syscon";
+			reg = <0x9a100000 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		mdio: mdio@9a101000 {
+			compatible = "zte,zx279127-mdio";
+			reg = <0x9a101000 0x18>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		i2c0: i2c@9a102000 {
+			compatible = "zte,ZX279127-i2c";
+			reg = <0x9a102000 0x40>;
+			interrupts = <GIC_SPI 26 IRQ_TYPE_LEVEL_HIGH>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		ssp: spi@9a105000 {
+			compatible = "zte,zx279127-ssp";
+			reg = <0x9a105000 0x1000>;
+			interrupts = <GIC_SPI 25 IRQ_TYPE_LEVEL_HIGH>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		pp: ethernet@92140000 {
+			compatible = "zte,zx279127-pp";
+			reg = <0x92140000 0x40000>;
+			interrupts = <GIC_SPI 80 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
+
+		switch: switch@92300000 {
+			compatible = "zte,zx279127-sw";
+			reg = <0x92300000 0x34000>;
+			interrupts = <GIC_SPI 81 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
+
+		pcie: pcie@10000000 {
+			compatible = "zte,ZX279128-pcie", "snps,dw-pcie";
+			interrupts = <GIC_SPI 41 IRQ_TYPE_LEVEL_HIGH>,
+			             <GIC_SPI 64 IRQ_TYPE_LEVEL_HIGH>,
+			             <GIC_SPI 37 IRQ_TYPE_LEVEL_HIGH>,
+			             <GIC_SPI 60 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
+
+		usb_dwc2: usb@9000000 {
+			compatible = "zte,zx279127-dwc2", "snps,dwc2";
+			reg = <0x09000000 0x10000>;
+			interrupts = <GIC_SPI 36 IRQ_TYPE_LEVEL_HIGH>;
+			dr_mode = "host";
+			status = "disabled";
+		};
+
+		usb_dwc3: usb@9100000 {
+			compatible = "zte,zx279128-dwc3", "snps,dwc3";
+			reg = <0x09100000 0x10000>;
+			interrupts = <GIC_SPI 59 IRQ_TYPE_LEVEL_HIGH>;
+			dr_mode = "host";
+			status = "disabled";
+		};
+	};
+};

@@ -1,0 +1,28 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-only
+# Copyright (C) 2026 OpenWrt.org
+
+[ -e /lib/firmware/$FIRMWARE ] && exit 0
+
+. /lib/functions/caldata.sh
+
+board=$(board_name)
+
+case "$FIRMWARE" in
+"mt7603e.eeprom")
+	case "$board" in
+	zte,zxhn-f670l|\
+	zte,f670l)
+		caldata_extract "wlan" 0x0 0x200
+		;;
+	esac
+	;;
+"mt7612e.eeprom"|"mt7662_client.bin")
+	case "$board" in
+	zte,zxhn-f670l|\
+	zte,f670l)
+		caldata_extract "wlan" 0x200 0x200
+		;;
+	esac
+	;;
+esac

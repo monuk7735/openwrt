@@ -1,0 +1,20 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-only
+# Copyright (C) 2026 OpenWrt.org
+
+. /lib/functions/uci-defaults.sh
+
+board_config_update
+board=$(board_name)
+
+case "$board" in
+zte,zxhn-f670l|\
+zte,f670l)
+	ucidef_set_led_default "power" "Power" "green:power" "1"
+	ucidef_set_led_wlan "wlan2g" "WLAN 2.4G" "green:wlan2g" "phy0tpt"
+	ucidef_set_led_wlan "wlan5g" "WLAN 5G" "green:wlan5g" "phy1tpt"
+	;;
+esac
+
+board_config_flush
+exit 0
