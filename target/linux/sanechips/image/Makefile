@@ -22,7 +22,7 @@ define Device/Default
   KERNEL_NAME := zImage
   KERNEL_LOADADDR := 0x40008000
   KERNEL_ENTRY := 0x40008000
-  DEVICE_DTS_DIR := $(DTS_DIR)
+  DEVICE_DTS_DIR := ../dts
   KERNEL := kernel-bin | append-dtb | uImage none
   KERNEL_INITRAMFS := kernel-bin | append-dtb | uImage none
 endef
