@@ -64,8 +64,9 @@ def build_zte_package(kernel_bytes, rootfs_bytes, model_str, ver_str):
     # r5 + 0x40 (0x7c): Rootfs length
     struct.pack_into("<I", hdr, 0x7c, rflen)
 
-    # r5 + 0x44 (0x80): Image type / slot flag
-    struct.pack_into("<I", hdr, 0x80, 0)
+    # r5 + 0x44 (0x80): Rootfs payload offset in container (U-Boot: r2 = [r5, #68] + 0x42000000)
+    rf_offset = (0x168 + klen) if rflen > 0 else 0
+    struct.pack_into("<I", hdr, 0x80, rf_offset)
 
     # r5 + 0x48 (0x84): Rootfs CRC32
     struct.pack_into("<I", hdr, 0x84, rfcrc)
