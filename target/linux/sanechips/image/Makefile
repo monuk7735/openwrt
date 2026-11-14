@@ -10,6 +10,7 @@ DEVICE_VARS += ZTE_MODEL ZTE_VERSION
 define Build/zte-f670l-header
 	python3 $(TOPDIR)/target/linux/sanechips/image/zte-pack.py \
 		--kernel $(IMAGE_KERNEL) \
+		--wrap-jffs2 \
 		$(if $(IMAGE_ROOTFS),--rootfs $(IMAGE_ROOTFS)) \
 		--output $@.new \
 		--model "$(ZTE_MODEL)" \

@@ -8,8 +8,12 @@
 
 import argparse
 import binascii
+import os
+import shutil
 import struct
+import subprocess
 import sys
+import tempfile
 import time
 
 def parse_args():
@@ -19,6 +23,7 @@ def parse_args():
     parser.add_argument("--output", required=True, help="Output upgrade.bin")
     parser.add_argument("--model", default="ZXHN F670L UNI V1.1.20P3N4D", help="Target router model string")
     parser.add_argument("--version", default="V1.1.20P3N4D", help="Target software version string")
+    parser.add_argument("--wrap-jffs2", action="store_true", help="Wrap kernel as 0uImage in JFFS2 at offset 0x20000 for ZTE U-Boot")
     return parser.parse_args()
 
 def build_zte_package(kernel_bytes, rootfs_bytes, model_str, ver_str):
@@ -94,6 +99,27 @@ def main():
 
     with open(args.kernel, "rb") as f:
         kernel_bytes = f.read()
+
+    if args.wrap_jffs2:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            indir = os.path.join(tmpdir, "root")
+            os.makedirs(indir, exist_ok=True)
+            uimage_path = os.path.join(indir, "0uImage")
+            with open(uimage_path, "wb") as f:
+                f.write(kernel_bytes)
+            jffs2_out = os.path.join(tmpdir, "kernel_jffs2.bin")
+            # Prefer host tool in staging_dir if present
+            mkfs_cmd = "mkfs.jffs2"
+            staging_mkfs = os.path.expanduser("~/src/openwrt-dev/openwrt/staging_dir/host/bin/mkfs.jffs2")
+            if os.path.exists(staging_mkfs):
+                mkfs_cmd = staging_mkfs
+            cmd = [mkfs_cmd, "-e", "0x20000", "-p", "-l", "-n", "-d", indir, "-o", jffs2_out]
+            subprocess.run(cmd, check=True)
+            with open(jffs2_out, "rb") as f:
+                jffs2_bytes = f.read()
+            # Pad from 0x168 to 0x20000 with zeroes so JFFS2 lands at eraseblock 1 (0x20000)
+            padding = b"\x00" * (0x20000 - 0x168)
+            kernel_bytes = padding + jffs2_bytes
 
     rootfs_bytes = b""
     if args.rootfs:
