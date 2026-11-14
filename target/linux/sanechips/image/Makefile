@@ -37,7 +37,7 @@ define Device/zte_zxhn-f670l
   ZTE_MODEL := ZXHN F670L UNI V1.1.20P3N4D
   ZTE_VERSION := V1.1.20P3N4D
   IMAGES := upgrade.bin
-  IMAGE/upgrade.bin := append-kernel | pad-to 128k | append-rootfs | pad-rootfs | zte-f670l-header
+  IMAGE/upgrade.bin := append-kernel | zte-f670l-header
 endef
 TARGET_DEVICES += zte_zxhn-f670l
 
