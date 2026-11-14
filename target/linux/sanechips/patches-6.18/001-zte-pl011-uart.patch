@@ -1,0 +1,99 @@
+--- a/drivers/tty/serial/amba-pl011.c	2026-11-14 16:33:33.437261667 +0530
++++ b/drivers/tty/serial/amba-pl011.c	2026-11-14 16:33:06.932335420 +0530
+@@ -216,6 +216,38 @@
+ 	.get_fifosize		= get_fifosize_st,
+ };
+ 
++static const u16 pl011_zte_offsets[REG_ARRAY_SIZE] = {
++	[REG_DR] = ZX_UART011_DR,
++	[REG_FR] = ZX_UART011_FR,
++	[REG_LCRH_RX] = ZX_UART011_LCRH,
++	[REG_LCRH_TX] = ZX_UART011_LCRH,
++	[REG_IBRD] = ZX_UART011_IBRD,
++	[REG_FBRD] = ZX_UART011_FBRD,
++	[REG_CR] = ZX_UART011_CR,
++	[REG_IFLS] = ZX_UART011_IFLS,
++	[REG_IMSC] = ZX_UART011_IMSC,
++	[REG_RIS] = ZX_UART011_RIS,
++	[REG_MIS] = ZX_UART011_MIS,
++	[REG_ICR] = ZX_UART011_ICR,
++	[REG_DMACR] = ZX_UART011_DMACR,
++};
++
++static unsigned int get_fifosize_zte(struct amba_device *dev)
++{
++	return 16;
++}
++
++static struct vendor_data vendor_zte = {
++	.reg_offset		= pl011_zte_offsets,
++	.access_32b		= true,
++	.ifls			= UART011_IFLS_RX4_8 | UART011_IFLS_TX4_8,
++	.fr_busy		= ZX_UART01x_FR_BUSY,
++	.fr_dsr			= ZX_UART01x_FR_DSR,
++	.fr_cts			= ZX_UART01x_FR_CTS,
++	.fr_ri			= ZX_UART011_FR_RI,
++	.get_fifosize		= get_fifosize_zte,
++};
++
+ /* Deals with DMA transactions */
+ 
+ struct pl011_dmabuf {
+@@ -2736,6 +2768,34 @@
+ 
+ OF_EARLYCON_DECLARE(pl011, "arm,sbsa-uart", pl011_early_console_setup);
+ 
++static void zte_early_putc(struct uart_port *port, unsigned char c)
++{
++	while (readl(port->membase + ZX_UART011_FR) & BIT(5))
++		cpu_relax();
++	writel(c, port->membase + ZX_UART011_DR);
++}
++
++static void zte_early_write(struct console *con, const char *s, unsigned int n)
++{
++	struct earlycon_device *dev = con->data;
++
++	uart_console_write(&dev->port, s, n, zte_early_putc);
++}
++
++static int __init zte_early_console_setup(struct earlycon_device *device,
++					  const char *opt)
++{
++	if (!device->port.membase)
++		return -ENODEV;
++
++	device->con->write = zte_early_write;
++	return 0;
++}
++
++EARLYCON_DECLARE(zteuart, zte_early_console_setup);
++OF_EARLYCON_DECLARE(zteuart, "zte,zx29-uart", zte_early_console_setup);
++OF_EARLYCON_DECLARE(zteuart_old, "zte,ZX279127-uart", zte_early_console_setup);
++
+ /*
+  * On Qualcomm Datacenter Technologies QDF2400 SOCs affected by
+  * Erratum 44, traditional earlycon can be enabled by specifying
+@@ -3129,6 +3189,11 @@
+ 		.mask	= 0x00ffffff,
+ 		.data	= &vendor_st,
+ 	},
++	{
++		.id	= 0x001feffe,
++		.mask	= 0x00ffffff,
++		.data	= &vendor_zte,
++	},
+ 	{ 0, 0 },
+ };
+ 
+--- a/drivers/tty/serial/Kconfig	2026-11-14 16:34:53.883134834 +0530
++++ b/drivers/tty/serial/Kconfig	2026-11-14 16:34:46.885399432 +0530
+@@ -47,7 +47,7 @@
+ 
+ config SERIAL_AMBA_PL011
+ 	tristate "ARM AMBA PL011 serial port support"
+-	depends on ARM_AMBA
++	select ARM_AMBA
+ 	select SERIAL_CORE
+ 	help
+ 	  This selects the ARM(R) AMBA(R) PrimeCell PL011 UART.  If you have

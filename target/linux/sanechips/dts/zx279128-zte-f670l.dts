@@ -18,7 +18,7 @@
 	};
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 earlycon=zteuart,0x94405000";
+		bootargs = "earlycon=zteuart,0x94405000 console=ttyAMA0,115200n8 earlyprintk";
 		stdout-path = "serial0:115200n8";
 	};
 

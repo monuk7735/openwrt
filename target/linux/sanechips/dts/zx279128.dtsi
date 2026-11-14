@@ -122,20 +122,22 @@
 		};
 
 		uart0: serial@94405000 {
-			compatible = "zte,ZX279127-uart", "ns16550a";
+			compatible = "arm,pl011", "arm,primecell";
+			arm,primecell-periphid = <0x001feffe>;
 			reg = <0x94405000 0x1000>;
 			interrupts = <GIC_SPI 10 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&clk_uart>;
-			reg-shift = <2>;
+			clocks = <&clk_uart>, <&clk_uart>;
+			clock-names = "uartclk", "apb_pclk";
 			status = "disabled";
 		};
 
 		uart1: serial@94406000 {
-			compatible = "zte,ZX279127-uart", "ns16550a";
+			compatible = "arm,pl011", "arm,primecell";
+			arm,primecell-periphid = <0x001feffe>;
 			reg = <0x94406000 0x1000>;
 			interrupts = <GIC_SPI 9 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&clk_uart>;
-			reg-shift = <2>;
+			clocks = <&clk_uart>, <&clk_uart>;
+			clock-names = "uartclk", "apb_pclk";
 			status = "disabled";
 		};
 
