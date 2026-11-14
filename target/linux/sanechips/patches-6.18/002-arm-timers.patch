@@ -20,3 +20,14 @@
  	help
  	  This options enables support for the ARM timer and watchdog unit
  
+--- a/drivers/irqchip/Kconfig	2026-11-14 16:46:12.376750518 +0530
++++ b/drivers/irqchip/Kconfig	2026-11-14 16:46:04.550966034 +0530
+@@ -6,7 +6,7 @@
+ 	depends on (OF_IRQ || ACPI_GENERIC_GSI)
+ 
+ config ARM_GIC
+-	bool
++	bool "ARM Generic Interrupt Controller (GIC) support"
+ 	depends on OF
+ 	select IRQ_DOMAIN_HIERARCHY
+ 	select GENERIC_IRQ_EFFECTIVE_AFF_MASK if SMP

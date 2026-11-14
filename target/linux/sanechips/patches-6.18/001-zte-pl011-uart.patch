@@ -39,7 +39,25 @@
  /* Deals with DMA transactions */
  
  struct pl011_dmabuf {
-@@ -2736,6 +2768,34 @@
+@@ -1793,6 +1825,8 @@
+ 		return retval;
+ 
+ 	uap->port.uartclk = clk_get_rate(uap->clk);
++	if (!uap->port.uartclk)
++		uap->port.uartclk = 25000000;
+ 
+ 	/* Clear pending error and receive interrupts */
+ 	pl011_write(UART011_OEIS | UART011_BEIS | UART011_PEIS |
+@@ -2461,6 +2495,8 @@
+ 	}
+ 
+ 	uap->port.uartclk = clk_get_rate(uap->clk);
++	if (!uap->port.uartclk)
++		uap->port.uartclk = 25000000;
+ 
+ 	if (uap->vendor->fixed_options) {
+ 		baud = uap->fixed_baud;
+@@ -2736,6 +2772,34 @@
  
  OF_EARLYCON_DECLARE(pl011, "arm,sbsa-uart", pl011_early_console_setup);
  
@@ -74,7 +92,18 @@
  /*
   * On Qualcomm Datacenter Technologies QDF2400 SOCs affected by
   * Erratum 44, traditional earlycon can be enabled by specifying
-@@ -3129,6 +3189,11 @@
+@@ -2916,6 +2980,10 @@
+ 	if (IS_ERR(uap->clk))
+ 		return PTR_ERR(uap->clk);
+ 
++	uap->port.uartclk = clk_get_rate(uap->clk);
++	if (!uap->port.uartclk)
++		uap->port.uartclk = 25000000;
++
+ 	uap->reg_offset = vendor->reg_offset;
+ 	uap->vendor = vendor;
+ 	uap->fifosize = vendor->get_fifosize(dev);
+@@ -3129,6 +3197,11 @@
  		.mask	= 0x00ffffff,
  		.data	= &vendor_st,
  	},
@@ -86,6 +115,7 @@
  	{ 0, 0 },
  };
  
+
 --- a/drivers/tty/serial/Kconfig	2026-11-14 16:34:53.883134834 +0530
 +++ b/drivers/tty/serial/Kconfig	2026-11-14 16:34:46.885399432 +0530
 @@ -47,7 +47,7 @@
