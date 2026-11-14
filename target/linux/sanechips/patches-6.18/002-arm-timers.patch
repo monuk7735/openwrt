@@ -1,0 +1,22 @@
+--- a/drivers/clocksource/Kconfig	2026-11-14 16:41:46.137381255 +0530
++++ b/drivers/clocksource/Kconfig	2026-11-14 16:41:32.183801458 +0530
+@@ -388,7 +388,7 @@
+ 	  allwinner,erratum-unknown1 property is found in the timer node.
+ 
+ config ARM_GLOBAL_TIMER
+-	bool "Support for the ARM global timer" if COMPILE_TEST
++	bool "Support for the ARM global timer"
+ 	select TIMER_OF if OF
+ 	depends on ARM
+ 	help
+--- a/arch/arm/Kconfig	2026-11-14 16:41:47.378344000 +0530
++++ b/arch/arm/Kconfig	2026-11-14 16:41:37.730634132 +0530
+@@ -960,7 +960,7 @@
+ 	  This option enables support for the ARM architected timer
+ 
+ config HAVE_ARM_TWD
+-	bool
++	bool "Support for the ARM timer and watchdog unit"
+ 	help
+ 	  This options enables support for the ARM timer and watchdog unit
+ 
