@@ -113,7 +113,7 @@ def main():
             staging_mkfs = os.path.expanduser("~/src/openwrt-dev/openwrt/staging_dir/host/bin/mkfs.jffs2")
             if os.path.exists(staging_mkfs):
                 mkfs_cmd = staging_mkfs
-            cmd = [mkfs_cmd, "-e", "0x20000", "-p", "-l", "-n", "-d", indir, "-o", jffs2_out]
+            cmd = [mkfs_cmd, "-e", "0x20000", "-p", "-l", "-n", "-x", "lzma", "-d", indir, "-o", jffs2_out]
             subprocess.run(cmd, check=True)
             with open(jffs2_out, "rb") as f:
                 jffs2_bytes = f.read()
