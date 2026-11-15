@@ -1,0 +1,125 @@
+--- a/mt7603/pci.c
++++ b/mt7603/pci.c
+@@ -28,14 +28,21 @@
+ 
+ 	pci_set_master(pdev);
+ 
++	if (!pdev->dev.dma_mask)
++		pdev->dev.dma_mask = &pdev->dev.coherent_dma_mask;
++
+ 	ret = dma_set_mask(&pdev->dev, DMA_BIT_MASK(32));
+-	if (ret)
++	if (ret) {
++		dev_err(&pdev->dev, "dma_set_mask failed: %d\n", ret);
+ 		return ret;
++	}
+ 
+ 	mdev = mt76_alloc_device(&pdev->dev, sizeof(*dev), &mt7603_ops,
+ 				 &mt7603_drv_ops);
+-	if (!mdev)
++	if (!mdev) {
++		dev_err(&pdev->dev, "mt76_alloc_device failed\n");
+ 		return -ENOMEM;
++	}
+ 
+ 	dev = container_of(mdev, struct mt7603_dev, mt76);
+ 	mt76_mmio_init(mdev, pcim_iomap_table(pdev)[0]);
+@@ -48,12 +55,16 @@
+ 
+ 	ret = devm_request_irq(mdev->dev, pdev->irq, mt7603_irq_handler,
+ 			       IRQF_SHARED, KBUILD_MODNAME, dev);
+-	if (ret)
++	if (ret) {
++		dev_err(&pdev->dev, "request_irq failed: %d\n", ret);
+ 		goto error;
++	}
+ 
+ 	ret = mt7603_register_device(dev);
+-	if (ret)
++	if (ret) {
++		dev_err(&pdev->dev, "mt7603_register_device failed: %d\n", ret);
+ 		goto error;
++	}
+ 
+ 	return 0;
+ error:
+--- a/mt76x2/pci.c
++++ b/mt76x2/pci.c
+@@ -49,14 +49,21 @@
+ 
+ 	pci_set_master(pdev);
+ 
++	if (!pdev->dev.dma_mask)
++		pdev->dev.dma_mask = &pdev->dev.coherent_dma_mask;
++
+ 	ret = dma_set_mask(&pdev->dev, DMA_BIT_MASK(32));
+-	if (ret)
++	if (ret) {
++		dev_err(&pdev->dev, "dma_set_mask failed: %d\n", ret);
+ 		return ret;
++	}
+ 
+ 	mdev = mt76_alloc_device(&pdev->dev, sizeof(*dev), &mt76x2_ops,
+ 				 &drv_ops);
+-	if (!mdev)
++	if (!mdev) {
++		dev_err(&pdev->dev, "mt76_alloc_device failed\n");
+ 		return -ENOMEM;
++	}
+ 
+ 	dev = container_of(mdev, struct mt76x02_dev, mt76);
+ 	mt76_mmio_init(mdev, pcim_iomap_table(pdev)[0]);
+@@ -69,12 +76,16 @@
+ 
+ 	ret = devm_request_irq(mdev->dev, pdev->irq, mt76x02_irq_handler,
+ 			       IRQF_SHARED, KBUILD_MODNAME, dev);
+-	if (ret)
++	if (ret) {
++		dev_err(&pdev->dev, "request_irq failed: %d\n", ret);
+ 		goto error;
++	}
+ 
+ 	ret = mt76x2_register_device(dev);
+-	if (ret)
++	if (ret) {
++		dev_err(&pdev->dev, "mt76x2_register_device failed: %d\n", ret);
+ 		goto error;
++	}
+ 
+ 	/* Fix up ASPM configuration */
+ 
+--- a/mac80211.c
++++ b/mac80211.c
+@@ -794,14 +794,21 @@
+ 	}
+ 
+ 	ret = ieee80211_register_hw(hw);
+-	if (ret)
+-		return ret;
++	if (ret) {
++		dev_err(dev->dev, "ieee80211_register_hw failed: %d\n", ret);
++		goto err_led;
++	}
+ 
+ 	WARN_ON(mt76_worker_setup(hw, &dev->tx_worker, NULL, "tx"));
+ 	set_bit(MT76_STATE_REGISTERED, &phy->state);
+ 	sched_set_fifo_low(dev->tx_worker.task);
+ 
+ 	return 0;
++
++err_led:
++	if (IS_ENABLED(CONFIG_MT76_LEDS))
++		mt76_led_cleanup(phy);
++	return ret;
+ }
+ EXPORT_SYMBOL_GPL(mt76_register_device);
+ 
+@@ -822,6 +829,8 @@
+ 
+ void mt76_free_device(struct mt76_dev *dev)
+ {
++	if (IS_ENABLED(CONFIG_MT76_LEDS))
++		mt76_led_cleanup(&dev->phy);
+ 	mt76_worker_teardown(&dev->tx_worker);
+ 	if (dev->wq) {
+ 		destroy_workqueue(dev->wq);

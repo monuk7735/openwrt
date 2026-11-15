@@ -1,0 +1,304 @@
+--- /dev/null
++++ b/drivers/pci/controller/dwc/pcie-zx279128.c
+@@ -0,0 +1,276 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * PCIe Host Controller driver for ZTE ZX279128 SoC
++ *
++ * Copyright (C) 2026 OpenWrt.org
++ */
++
++#include <linux/delay.h>
++#include <linux/init.h>
++#include <linux/interrupt.h>
++#include <linux/io.h>
++#include <linux/irq.h>
++#include <linux/irqdomain.h>
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/of.h>
++#include <linux/of_irq.h>
++#include <linux/of_pci.h>
++#include <linux/pci.h>
++#include <linux/platform_device.h>
++#include <linux/resource.h>
++
++#include "pcie-designware.h"
++
++struct zx_pcie {
++	struct dw_pcie		pci;
++	void __iomem		*phy_base;
++	u32			port_id;
++	int			irq_intx;
++};
++
++#define to_zx_pcie(x)	container_of((x), struct zx_pcie, pci)
++
++static void zx_pcie_hw_init(struct device *dev, u32 port)
++{
++	void __iomem *crm_top;
++	void __iomem *crm1;
++	void __iomem *crm0;
++	void __iomem *gpio;
++	u32 val;
++
++	/*
++	 * 1. Top CRM register (0x94200000):
++	 * Port 0: clear bit 21 (0x200000) at offset 0x0c
++	 * Port 1: clear bit 24 (0x1000000) at offset 0x0c
++	 */
++	crm_top = ioremap(0x94200000, 0x100);
++	if (crm_top) {
++		val = readl(crm_top + 0x0c);
++		if (port == 0)
++			val &= ~BIT(21);
++		else
++			val &= ~BIT(24);
++		writel(val, crm_top + 0x0c);
++		iounmap(crm_top);
++	}
++	mdelay(5);
++
++	/*
++	 * 2. CRM1 register (0x94100000):
++	 * Port 0: clear bit 0 (0x1) at offset 0x54
++	 * Port 1: clear bit 3 (0x8) at offset 0x54
++	 */
++	crm1 = ioremap(0x94100000, 0x100);
++	if (crm1) {
++		val = readl(crm1 + 0x54);
++		if (port == 0)
++			val &= ~BIT(0);
++		else
++			val &= ~BIT(3);
++		writel(val, crm1 + 0x54);
++	}
++	mdelay(5);
++
++	/*
++	 * 3. CRM0 register (0x94000000):
++	 * Both ports: clear bit 26 (0x4000000) at offset 0x24
++	 */
++	crm0 = ioremap(0x94000000, 0x100);
++	if (crm0) {
++		val = readl(crm0 + 0x24);
++		val &= ~BIT(26);
++		writel(val, crm0 + 0x24);
++		iounmap(crm0);
++	}
++	mdelay(5);
++
++	/*
++	 * 4. CRM1:
++	 * Port 0: set bit 0 at 0x54, clear bit 8 (0x100) at 0x2c
++	 * Port 1: set bit 3 at 0x54, clear bit 17 (0x20000) at 0x2c
++	 */
++	if (crm1) {
++		val = readl(crm1 + 0x54);
++		if (port == 0)
++			val |= BIT(0);
++		else
++			val |= BIT(3);
++		writel(val, crm1 + 0x54);
++
++		val = readl(crm1 + 0x2c);
++		if (port == 0)
++			val &= ~BIT(8);
++		else
++			val &= ~BIT(17);
++		writel(val, crm1 + 0x2c);
++
++		iounmap(crm1);
++	}
++	mdelay(5);
++
++	/*
++	 * 5. GPIO PERST# at 0x94404000:
++	 * Port 0: GPIO 47 (Bank 2, bit 15, direction 0x80, set 0x98)
++	 * Port 1: GPIO 48 (Bank 3, bit 0, direction 0xc0, set 0xd8)
++	 */
++	gpio = ioremap(0x94404000, 0x200);
++	if (gpio) {
++		if (port == 0) {
++			val = readl(gpio + 0x80);
++			val |= BIT(15);
++			writel(val, gpio + 0x80);
++			writel(BIT(15), gpio + 0x98);
++		} else {
++			val = readl(gpio + 0xc0);
++			val |= BIT(0);
++			writel(val, gpio + 0xc0);
++			writel(BIT(0), gpio + 0xd8);
++		}
++		iounmap(gpio);
++	}
++	mdelay(5);
++
++	dev_info(dev, "PCIe%u: CRM and resets un-gated\n", port);
++}
++
++static bool zx_pcie_link_up(struct dw_pcie *pci)
++{
++	struct zx_pcie *zx = to_zx_pcie(pci);
++	u32 val;
++
++	if (!zx->phy_base)
++		return false;
++
++	val = readl(zx->phy_base + 0xdc);
++	return (((val >> 17) & 0x3f) == 0x11);
++}
++
++static int zx_pcie_map_irq(const struct pci_dev *pdev, u8 slot, u8 pin)
++{
++	struct pci_host_bridge *bridge = pci_find_host_bridge(pdev->bus);
++	struct zx_pcie *zx = dev_get_drvdata(bridge->dev.parent);
++	int irq;
++
++	irq = of_irq_parse_and_map_pci(pdev, slot, pin);
++	if (irq > 0) {
++		pci_info(pdev, "PCIe%u: of_irq mapped to %d\n", zx->port_id, irq);
++		return irq;
++	}
++
++	pci_info(pdev, "PCIe%u: fallback INTx mapped to %d\n", zx->port_id, zx->irq_intx);
++	return zx->irq_intx;
++}
++
++static int zx_pcie_host_init(struct dw_pcie_rp *pp)
++{
++	if (pp->bridge) {
++		pp->bridge->map_irq = zx_pcie_map_irq;
++		pp->bridge->dev.coherent_dma_mask = DMA_BIT_MASK(32);
++		if (!pp->bridge->dev.dma_mask)
++			pp->bridge->dev.dma_mask = &pp->bridge->dev.coherent_dma_mask;
++	}
++	return 0;
++}
++
++static int zx_pcie_msi_init(struct dw_pcie_rp *pp)
++{
++	/* Endpoints MT7603E/MT7612E use legacy INTx. Bypass DWC internal MSI. */
++	return 0;
++}
++
++static const struct dw_pcie_ops dw_pcie_ops = {
++	.link_up = zx_pcie_link_up,
++};
++
++static const struct dw_pcie_host_ops zx_pcie_host_ops = {
++	.init = zx_pcie_host_init,
++	.msi_init = zx_pcie_msi_init,
++};
++
++static int zx_pcie_probe(struct platform_device *pdev)
++{
++	struct device *dev = &pdev->dev;
++	struct zx_pcie *zx_pcie;
++	struct dw_pcie *pci;
++	struct dw_pcie_rp *pp;
++	u32 port_id = 0;
++	int ret;
++
++	of_property_read_u32(dev->of_node, "port-id", &port_id);
++
++	zx_pcie_hw_init(dev, port_id);
++
++	zx_pcie = devm_kzalloc(dev, sizeof(*zx_pcie), GFP_KERNEL);
++	if (!zx_pcie)
++		return -ENOMEM;
++
++	zx_pcie->port_id = port_id;
++	/* INTx interrupt: port 0 = GIC_SPI 41 (hwirq 73), port 1 = GIC_SPI 64 (hwirq 96) */
++	zx_pcie->irq_intx = irq_create_mapping(NULL, port_id ? 96 : 73);
++	dev_info(dev, "PCIe%u: INTx mapped to virq %d (hwirq %u)\n",
++		 port_id, zx_pcie->irq_intx, port_id ? 96 : 73);
++
++	pci = &zx_pcie->pci;
++	pci->dev = dev;
++	pci->ops = &dw_pcie_ops;
++	pp = &pci->pp;
++	pp->ops = &zx_pcie_host_ops;
++
++	dev->coherent_dma_mask = DMA_BIT_MASK(32);
++	if (!dev->dma_mask)
++		dev->dma_mask = &dev->coherent_dma_mask;
++	dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32));
++
++	platform_set_drvdata(pdev, zx_pcie);
++
++	/* Map PHY registers and configure PHY */
++	{
++		struct resource *res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "phy");
++		if (res) {
++			zx_pcie->phy_base = devm_ioremap_resource(dev, res);
++			if (!IS_ERR(zx_pcie->phy_base)) {
++				u32 val = readl(zx_pcie->phy_base);
++				val |= BIT(5);
++				writel(val, zx_pcie->phy_base);
++				dev_info(dev, "PCIe%u: PHY configured (reg0=0x%08x)\n", port_id, val);
++			} else {
++				dev_warn(dev, "PCIe%u: Failed to ioremap PHY resource\n", port_id);
++				zx_pcie->phy_base = NULL;
++			}
++		} else {
++			dev_warn(dev, "PCIe%u: PHY resource not found\n", port_id);
++			zx_pcie->phy_base = NULL;
++		}
++	}
++
++	ret = dw_pcie_host_init(pp);
++	if (ret) {
++		dev_err(dev, "Failed to initialize DW host (ret=%d)\n", ret);
++		return ret;
++	}
++
++	dev_info(dev, "PCIe%u: Host controller initialized successfully\n", port_id);
++	return 0;
++}
++
++static const struct of_device_id zx_pcie_of_match[] = {
++	{ .compatible = "zte,zx279128-pcie" },
++	{ .compatible = "zte,ZX279128-pcie" },
++	{},
++};
++MODULE_DEVICE_TABLE(of, zx_pcie_of_match);
++
++static struct platform_driver zx_pcie_driver = {
++	.driver = {
++		.name = "zx279128-pcie",
++		.of_match_table = zx_pcie_of_match,
++		.suppress_bind_attrs = true,
++	},
++	.probe = zx_pcie_probe,
++};
++builtin_platform_driver(zx_pcie_driver);
++
++MODULE_AUTHOR("OpenWrt Community");
++MODULE_DESCRIPTION("ZTE ZX279128 PCIe host controller driver");
++MODULE_LICENSE("GPL v2");
+--- a/drivers/pci/controller/dwc/Kconfig
++++ b/drivers/pci/controller/dwc/Kconfig
+@@ -400,5 +400,14 @@ config PCIE_UNIPHIER_EP
+ 	  soc-uniphier-pcie-ep.yaml.
+ 
++config PCIE_ZX279128
++	bool "ZTE ZX279128 PCIe controller"
++	depends on PCI_MSI
++	select PCIE_DW_HOST
++	help
++	  Enables support for the Synopsys DesignWare based PCIe controller
++	  found in Sanechips / ZTE ZX279128 Dual-Core ARM Cortex-A9 SoCs.
++	  Required for MediaTek MT7603E and MT7612E Wi-Fi cards on ZXHN F670L.
++
+ config PCIE_VISCONTI_HOST
+ 	bool "Toshiba Visconti PCIe host controller"
+ 	depends on ARCH_VISCONTI || COMPILE_TEST
+--- a/drivers/pci/controller/dwc/Makefile
++++ b/drivers/pci/controller/dwc/Makefile
+@@ -30,4 +30,5 @@
+ obj-$(CONFIG_PCIE_UNIPHIER) += pcie-uniphier.o
+ obj-$(CONFIG_PCIE_UNIPHIER_EP) += pcie-uniphier-ep.o
+ obj-$(CONFIG_PCIE_VISCONTI_HOST) += pcie-visconti.o
++obj-$(CONFIG_PCIE_ZX279128) += pcie-zx279128.o
+ obj-$(CONFIG_PCIE_RCAR_GEN4) += pcie-rcar-gen4.o
