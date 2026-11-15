@@ -7,16 +7,19 @@ include $(INCLUDE_DIR)/image.mk
 
 DEVICE_VARS += ZTE_MODEL ZTE_VERSION
 
-define Build/zte-f670l-header
+define Build/zte-f670l-initramfs-header
 	python3 $(TOPDIR)/target/linux/sanechips/image/zte-pack.py \
-		--kernel $(IMAGE_KERNEL) \
+		--kernel $(BIN_DIR)/$(KERNEL_INITRAMFS_IMAGE) \
 		--wrap-jffs2 \
-		$(if $(IMAGE_ROOTFS),--rootfs $(IMAGE_ROOTFS)) \
-		--output $@.new \
+		--output $@ \
 		--model "$(ZTE_MODEL)" \
 		--version "$(ZTE_VERSION)"
-	mv $@.new $@
+	cp -f $@ $(BIN_DIR)/upgrade.bin
+	cp -f $@ $(TOPDIR)/../ztef670l_data/upgrade.bin
+	cp -f $(BIN_DIR)/$(KERNEL_INITRAMFS_IMAGE) $(TOPDIR)/../ztef670l_data/uImage_initramfs.bin
 endef
+
+zte_zxhn-f670l-images:
 
 define Device/Default
   PROFILES := Default
@@ -34,11 +37,12 @@ define Device/zte_zxhn-f670l
   DEVICE_MODEL := ZXHN F670L
   DEVICE_VARIANT := v1.1
   DEVICE_DTS := zx279128-zte-f670l
-  DEVICE_PACKAGES := kmod-mt7603e kmod-mt76x2
+  DEVICE_PACKAGES := kmod-mt7603 kmod-mt76x2 iw hostapd-basic-mbedtls dnsmasq luci uhttpd rpcd
   ZTE_MODEL := ZXHN F670L UNI V1.1.20P3N4D
   ZTE_VERSION := V1.1.20P3N4D
-  IMAGES := upgrade.bin
-  IMAGE/upgrade.bin := append-kernel | zte-f670l-header
+  IMAGES :=
+  ARTIFACTS := upgrade.bin
+  ARTIFACT/upgrade.bin := zte-f670l-initramfs-header
 endef
 TARGET_DEVICES += zte_zxhn-f670l
 

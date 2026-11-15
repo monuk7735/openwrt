@@ -18,7 +18,7 @@
 	};
 
 	chosen {
-		bootargs = "earlycon=zteuart,0x94405000 console=ttyAMA0,115200n8 earlyprintk";
+		bootargs = "earlycon=zteuart,0x94405000 console=ttyAMA0,115200n8 initcall_debug cma=32M";
 		stdout-path = "serial0:115200n8";
 	};
 
@@ -96,26 +96,70 @@
 	};
 };
 
-&pcie {
+&pcie0 {
+	status = "okay";
+};
+
+&pcie1 {
 	status = "okay";
 };
 
 &usb_dwc2 {
-	status = "okay";
+	status = "disabled";
 };
 
 &usb_dwc3 {
-	status = "okay";
+	status = "disabled";
 };
 
 &mdio {
 	status = "okay";
+
+	phy10: ethernet-phy@a {
+		reg = <10>;
+	};
+
+	phy11: ethernet-phy@b {
+		reg = <11>;
+	};
+
+	phy12: ethernet-phy@c {
+		reg = <12>;
+	};
+
+	phy13: ethernet-phy@d {
+		reg = <13>;
+	};
 };
 
-&pp {
+&gmac {
 	status = "okay";
 };
 
-&switch {
+&gmac_port0 {
+	label = "lan1";
+	phy-handle = <&phy10>;
+	phy-mode = "internal";
+	status = "okay";
+};
+
+&gmac_port1 {
+	label = "lan2";
+	phy-handle = <&phy11>;
+	phy-mode = "internal";
+	status = "okay";
+};
+
+&gmac_port2 {
+	label = "lan3";
+	phy-handle = <&phy12>;
+	phy-mode = "internal";
+	status = "okay";
+};
+
+&gmac_port3 {
+	label = "lan4";
+	phy-handle = <&phy13>;
+	phy-mode = "internal";
 	status = "okay";
 };

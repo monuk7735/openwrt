@@ -101,6 +101,7 @@
 			cache-level = <2>;
 			arm,data-latency = <2 2 2>;
 			arm,tag-latency = <2 2 2>;
+			arm,shared-override;
 		};
 
 		timer1: timer@94402000 {
@@ -158,8 +159,10 @@
 		};
 
 		mdio: mdio@9a101000 {
-			compatible = "zte,zx279127-mdio";
+			compatible = "zte,zx279128s-mdio", "zte,zx279127-mdio";
 			reg = <0x9a101000 0x18>;
+			clocks = <&clk_uart>, <&clk_uart>;
+			clock-names = "pclk", "wclk";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
@@ -183,26 +186,88 @@
 			status = "disabled";
 		};
 
-		pp: ethernet@92140000 {
-			compatible = "zte,zx279127-pp";
-			reg = <0x92140000 0x40000>;
+		gmac: ethernet@92000000 {
+			compatible = "zte,zx279128s-gmac";
+			reg = <0x92000000 0x400000>;
 			interrupts = <GIC_SPI 80 IRQ_TYPE_LEVEL_HIGH>;
 			status = "disabled";
+
+			ethernet-ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				gmac_port0: port@0 {
+					reg = <0>;
+					status = "disabled";
+				};
+
+				gmac_port1: port@1 {
+					reg = <1>;
+					status = "disabled";
+				};
+
+				gmac_port2: port@2 {
+					reg = <2>;
+					status = "disabled";
+				};
+
+				gmac_port3: port@3 {
+					reg = <3>;
+					status = "disabled";
+				};
+
+				gmac_port4: port@4 {
+					reg = <4>;
+					status = "disabled";
+				};
+			};
 		};
 
-		switch: switch@92300000 {
-			compatible = "zte,zx279127-sw";
-			reg = <0x92300000 0x34000>;
-			interrupts = <GIC_SPI 81 IRQ_TYPE_LEVEL_HIGH>;
+		pcie0: pcie@10000000 {
+			compatible = "zte,zx279128-pcie", "snps,dw-pcie";
+			reg = <0x0f000000 0x4000>,
+			      <0x1c000000 0x10000>,
+			      <0x09500000 0x1000>;
+			reg-names = "dbi", "config", "phy";
+			#address-cells = <3>;
+			#size-cells = <2>;
+			device_type = "pci";
+			ranges = <0x82000000 0 0x10000000 0x10000000 0 0x08000000>;
+			num-lanes = <1>;
+			bus-range = <0x00 0xff>;
+			interrupts = <GIC_SPI 37 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "sts";
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 0x7>;
+			interrupt-map = <0 0 0 1 &gic GIC_SPI 41 IRQ_TYPE_LEVEL_HIGH>,
+			                <0 0 0 2 &gic GIC_SPI 41 IRQ_TYPE_LEVEL_HIGH>,
+			                <0 0 0 3 &gic GIC_SPI 41 IRQ_TYPE_LEVEL_HIGH>,
+			                <0 0 0 4 &gic GIC_SPI 41 IRQ_TYPE_LEVEL_HIGH>;
+			port-id = <0>;
 			status = "disabled";
 		};
 
-		pcie: pcie@10000000 {
-			compatible = "zte,ZX279128-pcie", "snps,dw-pcie";
-			interrupts = <GIC_SPI 41 IRQ_TYPE_LEVEL_HIGH>,
-			             <GIC_SPI 64 IRQ_TYPE_LEVEL_HIGH>,
-			             <GIC_SPI 37 IRQ_TYPE_LEVEL_HIGH>,
-			             <GIC_SPI 60 IRQ_TYPE_LEVEL_HIGH>;
+		pcie1: pcie@20000000 {
+			compatible = "zte,zx279128-pcie", "snps,dw-pcie";
+			reg = <0x0f100000 0x4000>,
+			      <0x2c000000 0x10000>,
+			      <0x09600000 0x1000>;
+			reg-names = "dbi", "config", "phy";
+			#address-cells = <3>;
+			#size-cells = <2>;
+			device_type = "pci";
+			ranges = <0x82000000 0 0x20000000 0x20000000 0 0x08000000>;
+			num-lanes = <1>;
+			bus-range = <0x00 0xff>;
+			interrupts = <GIC_SPI 60 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "sts";
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 0x7>;
+			interrupt-map = <0 0 0 1 &gic GIC_SPI 64 IRQ_TYPE_LEVEL_HIGH>,
+			                <0 0 0 2 &gic GIC_SPI 64 IRQ_TYPE_LEVEL_HIGH>,
+			                <0 0 0 3 &gic GIC_SPI 64 IRQ_TYPE_LEVEL_HIGH>,
+			                <0 0 0 4 &gic GIC_SPI 64 IRQ_TYPE_LEVEL_HIGH>;
+			port-id = <1>;
 			status = "disabled";
 		};
 
