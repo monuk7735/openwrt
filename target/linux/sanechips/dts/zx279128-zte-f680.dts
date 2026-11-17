@@ -1,0 +1,114 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (C) 2026 OpenWrt.org
+ * Device Tree for ZTE ZXHN F680
+ */
+
+/dts-v1/;
+
+#include "zx279128.dtsi"
+
+/ {
+    model = "ZTE ZXHN F680";
+    compatible = "zte,zxhn-f680", "zte,f680", "zte,zx279128";
+
+    aliases {
+        serial0 = &uart0;
+        serial1 = &uart1;
+    };
+
+    chosen {
+        bootargs = "earlycon=zteuart,0x94405000 console=ttyS0,115200n8 initcall_debug cma=32M";
+        stdout-path = "serial0:115200n8";
+    };
+    
+    memory@40000000 {
+        device_type = "memory";
+        reg = <0x40000000 0x08000000>; /* 128 MB DDR3 */
+    };
+};
+
+&uart0 {
+    status = "okay";
+};
+
+&spifc {
+    status = "okay";
+
+    flash@0 {
+        compatible = "spi-nand";
+        reg = <0>;
+        spi-max-frequency = <50000000>;
+
+        partitions {
+            compatible = "fixed-partitions";
+            #address-cells = <1>;
+            #size-cells = <1>;
+
+            partition@0 {
+                label = "u-boot";
+                reg = <0x00000000 0x00180000>;
+                read-only;
+            };
+
+            partition@180000 {
+                label = "env";
+                reg = <0x00180000 0x00080000>;
+            };
+
+            partition@200000 {
+                label = "others";
+                reg = <0x00200000 0x00400000>;
+            };
+
+            partition@600000 {
+                label = "paramtag";
+                reg = <0x00600000 0x00400000>;
+                read-only;
+            };
+
+            partition@a00000 {
+                label = "wlan";
+                reg = <0x00a00000 0x00400000>;
+                read-only;
+            };
+
+            partition@e00000 {
+                label = "usercfg";
+                reg = <0x00e00000 0x00800000>;
+            };
+
+            partition@1600000 {
+                label = "middleware";
+                reg = <0x01600000 0x00400000>;
+            };
+
+            partition@1a00000 {
+                label = "kernel1";
+                reg = <0x01a00000 0x02000000>;
+            };
+
+            partition@3a00000 {
+                label = "kernel2";
+                reg = <0x03a00000 0x02000000>;
+            };
+
+            partition@5a00000 {
+                label = "rootfs";
+                reg = <0x05a00000 0x02600000>;
+            };
+        };
+    };
+};
+
+&pon {
+    status = "okay";
+};
+
+&sw {
+    status = "okay";
+};
+
+&gephy {
+    status = "okay";
+};

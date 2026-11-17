@@ -1,20 +1,20 @@
 {
-	"model": {
-		"id": "zte,zxhn-f670l",
-		"name": "ZTE ZXHN F670L v1.1"
-	},
-	"network": {
-		"lan": {
-			"device": "br-lan",
-			"ports": [
-				"lan1",
-				"lan2",
-				"lan3",
-				"lan4"
-			],
-			"protocol": "static",
-			"ipaddr": "192.168.1.1",
-			"netmask": "255.255.255.0"
-		}
-	}
+        "model": {
+                "id": "zte,zxhn-f680",
+                "name": "ZTE ZXHN F680"
+        },
+        "network": {
+                "lan": {
+                        "device": "br-lan",
+                        "ports": [
+                                "lan1",
+                                "lan2",
+                                "lan3",
+                                "lan4"
+                        ],
+                        "protocol": "static",
+                        "ipaddr": "192.168.1.1",
+                        "netmask": "255.255.255.0"
+                }
+        }
 }
