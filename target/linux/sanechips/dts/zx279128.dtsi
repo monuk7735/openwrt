@@ -187,6 +187,21 @@
                          <GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
             status = "disabled";
         };
-    
+    	usb0: usb@9000000 {
+            compatible = "zte,zx279127-dwc2", "snps,dwc2";
+            reg = <0x9000000 0x10000>;
+            interrupts = <GIC_SPI 36 IRQ_TYPE_LEVEL_HIGH>; /* IRQ 36 (0x24) */
+            dr_mode = "host";
+            status = "disabled";
+        };
+
+        usb1: usb@9100000 {
+            compatible = "zte,zx279128-dwc3", "snps,dwc3";
+            reg = <0x9100000 0x10000>;
+            interrupts = <GIC_SPI 59 IRQ_TYPE_LEVEL_HIGH>; /* IRQ 59 (0x3b) */
+            dr_mode = "host";
+            status = "disabled";
+	};
+
     };
 };
